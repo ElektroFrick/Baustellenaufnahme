@@ -31,6 +31,32 @@ const { useState, useRef, useEffect, useCallback } = React;
 /*      Schrank-Editor mit Foto und Hutschienen-Erkennung              */
 /* ------------------------------------------------------------------ */
 
+/* Datei speichern: im Browser als Download, in der Android-App über das
+   Teilen-Menü (dort funktionieren normale Downloads nicht). */
+let nativePlugins = null;
+async function dateiSichern(blob, name) {
+  const cap = window.Capacitor;
+  if (!(cap && cap.isNativePlatform && cap.isNativePlatform())) {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+    return;
+  }
+  if (!nativePlugins) {
+    nativePlugins = { fs: cap.registerPlugin("Filesystem"), teilen: cap.registerPlugin("Share") };
+  }
+  const base64 = await new Promise((ok, fehler) => {
+    const r = new FileReader();
+    r.onload = () => ok(String(r.result).split(",")[1]);
+    r.onerror = fehler;
+    r.readAsDataURL(blob);
+  });
+  const { uri } = await nativePlugins.fs.writeFile({ path: name, data: base64, directory: "CACHE" });
+  await nativePlugins.teilen.share({ title: name, files: [uri] });
+}
+
 const ARTEN = [
   { id: "wp", label: "Wärmepumpe", hint: "Außen-/Inneneinheit, Zuleitung, Zählerantrag" },
   { id: "pv", label: "Photovoltaik", hint: "Module, Wechselrichter, Speicher" },
@@ -1188,12 +1214,8 @@ function Plan({ aufnahme, setAufnahme, modus }) {
       return { ...a, grundriss: a.grundriss.slice(0, -1) };
     });
 
-  const png = () => {
-    const a = document.createElement("a");
-    a.href = canvasRef.current.toDataURL("image/png");
-    a.download = aufnahme.id + "_zeichnung.png";
-    a.click();
-  };
+  const png = () =>
+    canvasRef.current.toBlob((b) => dateiSichern(b, aufnahme.id + "_zeichnung.png"), "image/png");
 
   const knopf = (id, label) => (
     <button
@@ -2931,13 +2953,7 @@ function Abschluss({ aufnahme, speichern }) {
   const text = textErzeugen(aufnahme);
   const [kopiert, setKopiert] = useState(false);
 
-  const download = (inhalt, name, typ) => {
-    const b = new Blob([inhalt], { type: typ });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(b);
-    a.download = name;
-    a.click();
-  };
+  const download = (inhalt, name, typ) => dateiSichern(new Blob([inhalt], { type: typ }), name);
 
   return (
     <div className="space-y-4">
