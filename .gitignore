@@ -1,3 +1,5 @@
 node_modules/
 www/
 .playwright-mcp/
+# Signaturschlüssel nie ins Repo – liegt als GitHub-Secret vor
+android/signing/

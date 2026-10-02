@@ -24,9 +24,12 @@ Teilen-Menü raus, z. B. per Mail, WhatsApp oder in die Dateien-App.
 Lokal bauen (braucht Node und Android Studio): `npm install`,
 `npm run android`, dann den Ordner `android/` in Android Studio öffnen.
 
-**Wichtig:** `android/signing/` enthält den Signaturschlüssel. Ohne ihn lassen
-sich keine Updates mehr installieren – nicht löschen, und das Repo nicht
-öffentlich machen, solange der Schlüssel darin liegt.
+**Signaturschlüssel:** Die APK wird immer mit demselben Schlüssel signiert,
+sonst lassen sich Updates nicht drüberinstallieren. Er liegt **nicht** im Repo,
+sondern als Secrets `ANDROID_KEYSTORE_BASE64` und `ANDROID_KEYSTORE_PASSWORD`
+(Settings → Secrets and variables → Actions) und lokal in `android/signing/`.
+Diesen Ordner sicher aufbewahren – geht der Schlüssel verloren, müssen alle
+die App einmal neu installieren.
 
 ## Inhalt
 

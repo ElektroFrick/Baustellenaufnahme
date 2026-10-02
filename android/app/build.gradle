@@ -8,8 +8,8 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // Beim Bauen über GitHub Actions zählt die Versionsnummer automatisch hoch
-        versionCode (System.getenv("VERSION_CODE") ?: "1").toInteger()
-        versionName System.getenv("VERSION_NAME") ?: "1.0"
+        versionCode = Integer.parseInt(System.getenv("VERSION_CODE") ?: "1")
+        versionName = System.getenv("VERSION_NAME") ?: "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -18,20 +18,26 @@ android {
         }
     }
     // Immer derselbe Schlüssel, sonst lassen sich Updates nicht über die
-    // installierte App drüberinstallieren
+    // installierte App drüberinstallieren. android/signing/ liegt nicht im
+    // Repo: lokal von Hand, auf GitHub aus den Secrets erzeugt.
+    def signingDatei = file("../signing/signing.properties")
     def signing = new Properties()
-    file("../signing/signing.properties").withInputStream { signing.load(it) }
-    signingConfigs {
-        release {
-            storeFile file(signing.storeFile)
-            storePassword signing.storePassword
-            keyAlias signing.keyAlias
-            keyPassword signing.keyPassword
+    if (signingDatei.exists()) {
+        signingDatei.withInputStream { signing.load(it) }
+        signingConfigs {
+            release {
+                storeFile file(signing.storeFile)
+                storePassword signing.storePassword
+                keyAlias signing.keyAlias
+                keyPassword signing.keyPassword
+            }
         }
     }
     buildTypes {
         release {
-            signingConfig signingConfigs.release
+            if (signingDatei.exists()) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

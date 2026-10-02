@@ -15,14 +15,14 @@ jobs:
       VERSION_CODE: ${{ github.run_number }}
       VERSION_NAME: 1.0.${{ github.run_number }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: npm
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 21
@@ -33,6 +33,24 @@ jobs:
           npm ci
           npm run build
           npx cap sync android
+
+      - name: Signaturschlüssel aus den Secrets anlegen
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ]; then
+            echo "::error::Secrets ANDROID_KEYSTORE_BASE64 / ANDROID_KEYSTORE_PASSWORD fehlen"
+            exit 1
+          fi
+          mkdir -p android/signing
+          echo "$KEYSTORE_BASE64" | base64 -d > android/signing/release.jks
+          {
+            echo "storeFile=../signing/release.jks"
+            echo "storePassword=$KEYSTORE_PASSWORD"
+            echo "keyAlias=baustellenaufnahme"
+            echo "keyPassword=$KEYSTORE_PASSWORD"
+          } > android/signing/signing.properties
 
       - name: APK bauen
         working-directory: android
